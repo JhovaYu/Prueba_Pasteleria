@@ -1,6 +1,16 @@
 require('dotenv').config();
 const OpenAI = require('openai');
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let openai;
+
+function getOpenAIClient() {
+  if (!openai) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY is not set in environment variables.');
+    }
+    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return openai;
+}
 
 // --- Definición de Herramientas (Tools) ---
 const tools = [
@@ -124,7 +134,8 @@ exports.getNextAssistantResponse = async (session, userMessage) => {
   console.log("🤖 Historial enviado a OpenAI (últimos 3):", JSON.stringify(messages.slice(-3), null, 2));
 
   try {
-    const response = await openai.chat.completions.create({
+    const client = getOpenAIClient();
+    const response = await client.chat.completions.create({
       model: "gpt-4o",
       messages: messages,
       tools: tools,
@@ -136,11 +147,11 @@ exports.getNextAssistantResponse = async (session, userMessage) => {
     return assistantResponse;
 
   } catch (error) {
-      console.error("❌ Error llamando a OpenAI:", error);
-      // Devolver un mensaje de error como respuesta del asistente para mostrar en el chat
-      return {
-          role: 'assistant',
-          content: `Hubo un error al procesar tu solicitud con la IA: ${error.message}`
-      };
+    console.error("❌ Error llamando a OpenAI:", error);
+    // Devolver un mensaje de error como respuesta del asistente para mostrar en el chat
+    return {
+      role: 'assistant',
+      content: `Hubo un error al procesar tu solicitud con la IA: ${error.message}`
+    };
   }
 };

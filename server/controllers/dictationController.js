@@ -6,7 +6,17 @@ const path = require('path');
 
 
 // Carga la clave API desde .env (asegúrate que esté configurado)
-const openai = new OpenAI();
+let openai;
+
+function getOpenAIClient() {
+    if (!openai) {
+        if (!process.env.OPENAI_API_KEY) {
+            throw new Error('OPENAI_API_KEY is not set in environment variables.');
+        }
+        openai = new OpenAI();
+    }
+    return openai;
+}
 
 exports.processDictation = async (req, res) => {
     console.log("🎤 Recibida solicitud para procesar dictado...");
@@ -25,7 +35,8 @@ exports.processDictation = async (req, res) => {
         const tempFilePath = path.join(os.tmpdir(), `dictation-${Date.now()}.webm`);
         await fs.promises.writeFile(tempFilePath, req.file.buffer);
 
-        const transcription = await openai.audio.transcriptions.create({
+        const client = getOpenAIClient();
+        const transcription = await client.audio.transcriptions.create({
             model: "whisper-1",
             file: fs.createReadStream(tempFilePath), // Enviar como stream
             // language: "es" // Puedes especificar el idioma si siempre será español
@@ -43,7 +54,7 @@ exports.processDictation = async (req, res) => {
         console.log("Texto Transcrito:", transcribedText);
 
         if (!transcribedText || transcribedText.trim() === '') {
-             throw new Error("La transcripción no produjo texto.");
+            throw new Error("La transcripción no produjo texto.");
         }
 
         // === 2. Extraer Datos con el Servicio Existente ===
@@ -57,9 +68,9 @@ exports.processDictation = async (req, res) => {
     } catch (error) {
         console.error("❌ Error procesando el dictado:", error);
         // Intentar eliminar el archivo temporal también en caso de error
-         if (fs.existsSync(tempFilePath)) {
-             try { await fs.promises.unlink(tempFilePath); } catch (e) {}
-         }
+        if (fs.existsSync(tempFilePath)) {
+            try { await fs.promises.unlink(tempFilePath); } catch (e) { }
+        }
         res.status(500).json({
             message: error.message || 'Error interno al procesar el audio.',
             // Incluir detalles del error de OpenAI si están disponibles

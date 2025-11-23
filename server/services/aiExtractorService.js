@@ -1,14 +1,3 @@
-require('dotenv').config(); // Asegúrate de que dotenv esté configurado al inicio
-const OpenAI = require('openai');
-
-// La clave de la API se carga automáticamente desde las variables de entorno (process.env.OPENAI_API_KEY)
-const openai = new OpenAI();
-
-/**
- * Analiza el texto de una conversación de WhatsApp y extrae los datos del pedido en formato JSON.
- * Detecta si es un pastel Normal o Base/Especial y extrae la estructura correspondiente.
- * @param {string} conversationText - El texto completo de la conversación con el cliente.
- * @returns {Promise<object>} - Un objeto con los datos del folio extraídos.
  */
 async function getInitialExtraction(conversationText) {
     const today = new Date().toLocaleDateString('es-MX', {
@@ -92,7 +81,8 @@ async function getInitialExtraction(conversationText) {
 
     try {
         console.log("🤖 Iniciando extracción inicial con IA...");
-        const response = await openai.chat.completions.create({
+        const client = getOpenAIClient();
+        const response = await client.chat.completions.create({
             model: "gpt-4o", // Usamos gpt-4o por su mejor capacidad para seguir instrucciones complejas y estructurar JSON
             messages: [{ role: "system", content: prompt }],
             response_format: { type: "json_object" }, // Forzar salida JSON
@@ -103,15 +93,15 @@ async function getInitialExtraction(conversationText) {
 
         // Validación básica antes de parsear
         if (!extractedJsonString || !extractedJsonString.trim().startsWith('{') || !extractedJsonString.trim().endsWith('}')) {
-             console.error("Respuesta inválida de OpenAI:", extractedJsonString);
-             throw new Error("La respuesta de la IA no fue un objeto JSON válido.");
+            console.error("Respuesta inválida de OpenAI:", extractedJsonString);
+            throw new Error("La respuesta de la IA no fue un objeto JSON válido.");
         }
 
         let extractedData;
         try {
             extractedData = JSON.parse(extractedJsonString);
         } catch (parseError) {
-             console.error("Error al parsear JSON de OpenAI:", parseError, "JSON recibido:", extractedJsonString);
+            console.error("Error al parsear JSON de OpenAI:", parseError, "JSON recibido:", extractedJsonString);
             throw new Error(`Error al interpretar la respuesta de la IA: ${parseError.message}`);
         }
 
@@ -120,9 +110,9 @@ async function getInitialExtraction(conversationText) {
         const requiredKeys = ['folioType', 'persons', 'deliveryDate']; // Campos mínimos esperados
         for (const key of requiredKeys) {
             if (!(key in extractedData) || extractedData[key] === null || extractedData[key] === undefined) {
-                 console.warn(`Advertencia: La IA no extrajo el campo obligatorio '${key}'. Se intentará continuar, pero puede causar errores.`);
-                 // Podrías establecer un valor por defecto o lanzar un error más estricto si lo prefieres
-                 // extractedData[key] = null; // Ejemplo: asegurar que exista aunque sea nulo
+                console.warn(`Advertencia: La IA no extrajo el campo obligatorio '${key}'. Se intentará continuar, pero puede causar errores.`);
+                // Podrías establecer un valor por defecto o lanzar un error más estricto si lo prefieres
+                // extractedData[key] = null; // Ejemplo: asegurar que exista aunque sea nulo
             }
         }
 
@@ -148,8 +138,8 @@ async function getInitialExtraction(conversationText) {
             }
         } else { // Si es 'Normal'
             extractedData.tiers = null; // O []
-             if (!Array.isArray(extractedData.cakeFlavor)) extractedData.cakeFlavor = [];
-             if (!Array.isArray(extractedData.filling)) extractedData.filling = [];
+            if (!Array.isArray(extractedData.cakeFlavor)) extractedData.cakeFlavor = [];
+            if (!Array.isArray(extractedData.filling)) extractedData.filling = [];
         }
 
         // --- INICIO CORRECCIÓN: Asegurar que los arrays existan ---
