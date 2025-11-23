@@ -1,8 +1,5 @@
 const { Sequelize } = require('sequelize');
 
-// La configuración de la base de datos ahora se lee de las variables de entorno
-);
-
 const conectarDB = async () => {
   try {
     // Verifica que la conexión con la base de datos se ha establecido correctamente.
