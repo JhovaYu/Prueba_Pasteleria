@@ -3,7 +3,7 @@ const { getInitialExtraction } = require('../services/aiExtractorService');
 const { AISession } = require('../models'); // Asegúrate de importar el modelo
 
 // El comando que el empleado usará en WhatsApp para activar la IA
-const TRIGGER_COMMAND = 'generar folio de su pedido';
+const TRIGGER_COMMAND = 'generar folio';
 
 /**
  * Maneja los webhooks de WhatsApp. Si detecta el comando de activación,
